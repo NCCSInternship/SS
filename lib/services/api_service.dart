@@ -44,7 +44,6 @@ class ApiService {
         "message": "Network error"
       };
     }
-
   }
 
   // 2. AUTH: PROFILE
@@ -95,7 +94,6 @@ class ApiService {
 
   // 8. CLASSES: GET ALL (Instant)
   Future<Map<String, dynamic>> fetchClasses() async {
-    Future<Map<String, dynamic>> fetchClasses() async {
       final url = Uri.parse("$baseUrl/v1/classes");
 
       try {
@@ -109,7 +107,6 @@ class ApiService {
         print("Class API error: $e");
         return {};
       }
-    }
   }
 
   Map<String, dynamic> _fallbackSubjects() {

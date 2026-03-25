@@ -29,6 +29,8 @@ class AuthViewModel extends ChangeNotifier {
     try {
       final response = await _apiService.login(email, password);
 
+      print("LOGIN RESPONSE: $response");
+
       if (response["status"] == true) {
 
         final prefs = await SharedPreferences.getInstance();
