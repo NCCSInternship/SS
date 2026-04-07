@@ -107,7 +107,7 @@ class _SubjectQuestionsViewState extends State<SubjectQuestionsView> {
                                         ],
                                       ),
                                     );
-                                  }).toList(),
+                                  }),
                                 ],
                                 
                                 if (q.type == 'Subjective') ...[

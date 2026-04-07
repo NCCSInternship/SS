@@ -18,7 +18,40 @@ class ApiService {
 
   // 1. AUTH: LOGIN
   Future<Map<String, dynamic>> login(String email, String password) async {
-    final url = Uri.parse("$baseUrl/login");
+    print("DEBUG LOGIN CALLED");
+
+    // 👇 FORCE MOCK LOGIN (no API call)
+    await Future.delayed(const Duration(seconds: 1));
+
+    // Teacher
+    if (email == "teacher@teacher.com" && password == "teacher") {
+      return {
+        "status": true,
+        "token": "debug-token-teacher",
+        "user": {
+          "username": "teacher"
+        }
+      };
+    }
+
+    // Student
+    if (email == "student@student.com" && password == "student") {
+      return {
+        "status": true,
+        "token": "debug-token-student",
+        "user": {
+          "username": "student"
+        }
+      };
+    }
+
+    return {
+      "status": false,
+      "message": "Invalid credentials"
+    };
+
+
+    /* final url = Uri.parse("$baseUrl/login");
 
     try {
       final response = await http.post(
@@ -43,7 +76,7 @@ class ApiService {
         "status": false,
         "message": "Network error"
       };
-    }
+    } */
   }
 
   // 2. AUTH: PROFILE

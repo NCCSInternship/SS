@@ -1,20 +1,40 @@
   import 'package:flutter/material.dart';
   import 'package:provider/provider.dart';
   import '../viewmodels/auth_viewmodel.dart';
+  import 'package:flutter/foundation.dart';
 
   class LoginView extends StatefulWidget {
     const LoginView({super.key});
 
     @override
-    State<LoginView> createState() => _LoginPageState();
+    State<LoginView> createState() => _LoginViewState();
   }
 
-  class _LoginPageState extends State<LoginView> {
+  class _LoginViewState extends State<LoginView> {
     final emailController = TextEditingController();
     final passwordController = TextEditingController();
     String role = "Student";
 
     String get selectedRole => role.toLowerCase();
+
+    void _applyDebugCredentials(String role) {
+      if (!kDebugMode) return;
+
+      if (role == "teacher") {
+        emailController.text = "teacher@teacher.com";
+        passwordController.text = "teacher";
+      } else if (role == "student") {
+        emailController.text = "student@student.com";
+        passwordController.text = "student";
+      }
+    }
+
+    @override
+    void initState() {
+      super.initState();
+
+      _applyDebugCredentials(selectedRole);
+    }
 
     @override
     Widget build(BuildContext context) {
@@ -49,7 +69,10 @@
                     DropdownMenuItem(value: "Student", child: Text("Student")),
                     DropdownMenuItem(value: "Teacher", child: Text("Teacher")),
                   ],
-                  onChanged: (val) => setState(() => role = val!),
+                  onChanged: (val) {
+                    setState(() { role = val!; });
+                    _applyDebugCredentials(selectedRole); // AUTO CHANGE
+                  },
                   decoration: _inputStyle(),
                 ),
                 const SizedBox(height: 16),

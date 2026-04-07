@@ -36,24 +36,37 @@ class _StudentQuestionBankViewState extends State<StudentQuestionBankView> {
     final filteredQuestions = exams.bankQuestions.where((q) {
       if (!q.isForBank) return false;
 
+      // 1. Program Filter
       if (exams.selectedProgram != null) {
         String filterVal = exams.selectedProgram.programType.toString().toLowerCase();
         String qVal = q.program?.toLowerCase() ?? "";
         if (!qVal.contains(filterVal.split(' ')[0]) && !filterVal.contains(qVal)) return false;
       }
 
+      // 2. Class Filter
       if (exams.selectedClass != null) {
         String filterVal = exams.selectedClass.toString().toLowerCase();
         String qVal = q.className?.toLowerCase() ?? "";
         if (!qVal.contains(filterVal) && !filterVal.contains(qVal)) return false;
       }
 
+      // 3. Subject Filter
       if (exams.selectedSubject != null) {
         String filterVal = exams.selectedSubject is Map 
             ? exams.selectedSubject['subject_name'].toString().toLowerCase()
             : exams.selectedSubject.toString().toLowerCase();
         String qVal = q.subject?.toLowerCase() ?? "";
         if (!qVal.contains(filterVal) && !filterVal.contains(qVal)) return false;
+      }
+
+      // 4. Institution Filter
+      if (exams.selectedInstitution != null) {
+        if (q.institution != exams.selectedInstitution) return false;
+      }
+
+      // 5. Board Filter
+      if (exams.selectedBoard != null) {
+        if (q.board != exams.selectedBoard) return false;
       }
 
       return true;
@@ -74,6 +87,8 @@ class _StudentQuestionBankViewState extends State<StudentQuestionBankView> {
               exams.setSelectedProgram(null);
               exams.setSelectedClass(null);
               exams.setSelectedSubject(null);
+              exams.setSelectedInstitution(null);
+              exams.setSelectedBoard(null);
             },
           )
         ],
@@ -85,28 +100,34 @@ class _StudentQuestionBankViewState extends State<StudentQuestionBankView> {
             color: Colors.white,
             child: Column(
               children: [
-                _buildDropdown(
-                  label: "Select Program",
-                  value: exams.selectedProgram,
-                  items: exams.bankPrograms,
-                  onChanged: (val) {
-                    exams.setSelectedProgram(val);
-                    exams.setSelectedClass(null);
-                  },
-                  itemText: (item) => item.programType,
-                ),
-                const SizedBox(height: 10),
                 Row(
                   children: [
                     Expanded(
+                      child: _buildDropdown(
+                        label: "Program Type",
+                        value: exams.selectedProgram,
+                        items: exams.bankPrograms,
+                        onChanged: (val) {
+                          exams.setSelectedProgram(val);
+                          exams.setSelectedClass(null);
+                        },
+                        itemText: (item) => item.programType,
+                      ),
+                    ),
+                    const SizedBox(width: 10),
+                    Expanded(
                       child: DropdownButtonFormField<String>(
                         decoration: const InputDecoration(labelText: "Class", border: OutlineInputBorder(), isDense: true, filled: true, fillColor: Color(0xFFFAFAFA)),
-                        value: (exams.selectedClass is String && classList.contains(exams.selectedClass)) ? exams.selectedClass : null,
+                        initialValue: (exams.selectedClass is String && classList.contains(exams.selectedClass)) ? exams.selectedClass : null,
                         items: classList.map((c) => DropdownMenuItem(value: c, child: Text(c))).toList(),
                         onChanged: (val) => exams.setSelectedClass(val),
                       ),
                     ),
-                    const SizedBox(width: 10),
+                  ],
+                ),
+                const SizedBox(height: 10),
+                Row(
+                  children: [
                     Expanded(
                       child: _buildDropdown(
                         label: "Subject",
@@ -116,7 +137,23 @@ class _StudentQuestionBankViewState extends State<StudentQuestionBankView> {
                         itemText: (item) => item is Map ? item['subject_name'] : item.toString(),
                       ),
                     ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: _buildSimpleDropdown(
+                        label: "Institution",
+                        value: exams.selectedInstitution,
+                        items: exams.institutions,
+                        onChanged: (val) => exams.setSelectedInstitution(val),
+                      ),
+                    ),
                   ],
+                ),
+                const SizedBox(height: 10),
+                _buildSimpleDropdown(
+                  label: "Board",
+                  value: exams.selectedBoard,
+                  items: exams.boards,
+                  onChanged: (val) => exams.setSelectedBoard(val),
                 ),
               ],
             ),
@@ -128,7 +165,7 @@ class _StudentQuestionBankViewState extends State<StudentQuestionBankView> {
               padding: const EdgeInsets.all(16),
               child: Center(
                 child: Container(
-                  width: 800, // A4-like width (adjusts on web)
+                  width: 800, 
                   padding: const EdgeInsets.symmetric(horizontal: 30, vertical: 40),
                   decoration: BoxDecoration(
                     color: Colors.white,
@@ -143,10 +180,20 @@ class _StudentQuestionBankViewState extends State<StudentQuestionBankView> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Center(
-                        child: Text(
-                          "QUESTION BANK",
-                          style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
+                      Center(
+                        child: Column(
+                          children: [
+                            const Text(
+                              "QUESTION BANK",
+                              style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
+                            ),
+                            const SizedBox(height: 5),
+                            if (exams.selectedInstitution != null || exams.selectedBoard != null)
+                              Text(
+                                "${exams.selectedInstitution ?? ''} ${exams.selectedInstitution != null && exams.selectedBoard != null ? '|' : ''} ${exams.selectedBoard ?? ''}",
+                                style: const TextStyle(fontSize: 14, color: Colors.blueGrey, fontWeight: FontWeight.w600),
+                              ),
+                          ],
                         ),
                       ),
                       const SizedBox(height: 10),
@@ -186,7 +233,7 @@ class _StudentQuestionBankViewState extends State<StudentQuestionBankView> {
         isDense: true,
       ),
       isExpanded: true,
-      value: safeValue,
+      initialValue: safeValue,
       items: items.map((item) {
         return DropdownMenuItem(
           value: item,
@@ -197,18 +244,48 @@ class _StudentQuestionBankViewState extends State<StudentQuestionBankView> {
     );
   }
 
+  Widget _buildSimpleDropdown({
+    required String label,
+    required String? value,
+    required List<String> items,
+    required Function(String?) onChanged,
+  }) {
+    return DropdownButtonFormField<String>(
+      isExpanded: true,
+      decoration: InputDecoration(
+        labelText: label, 
+        border: const OutlineInputBorder(), 
+        isDense: true, 
+        filled: true, 
+        fillColor: Colors.grey[50]
+      ),
+      initialValue: value,
+      items: items.map((s) => DropdownMenuItem(value: s, child: Text(s))).toList(),
+      onChanged: onChanged,
+    );
+  }
+
   Widget _buildPaperQuestion(Question q, int number) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 20),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            "Q$number. ${q.text}",
-            style: const TextStyle(
-              fontSize: 16,
-              fontWeight: FontWeight.w500,
-            ),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Expanded(
+                child: Text(
+                  "Q$number. ${q.text}",
+                  style: const TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+              ),
+              if (q.marks != null)
+                Text("($q.marks)", style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.grey)),
+            ],
           ),
 
           const SizedBox(height: 8),

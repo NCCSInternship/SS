@@ -37,24 +37,37 @@ class _QuestionBankScreenState extends State<QuestionBankScreen> {
     final filteredQuestions = exams.bankQuestions.where((q) {
       if (!q.isForBank) return false;
 
+      // 1. Program Filter
       if (exams.selectedProgram != null) {
         String filterVal = exams.selectedProgram.programType.toString().toLowerCase();
         String qVal = q.program?.toLowerCase() ?? "";
         if (!qVal.contains(filterVal.split(' ')[0]) && !filterVal.contains(qVal)) return false;
       }
 
+      // 2. Class Filter
       if (exams.selectedClass != null) {
         String filterVal = exams.selectedClass.toString().toLowerCase();
         String qVal = q.className?.toLowerCase() ?? "";
         if (!qVal.contains(filterVal) && !filterVal.contains(qVal)) return false;
       }
 
+      // 3. Subject Filter
       if (exams.selectedSubject != null) {
         String filterVal = exams.selectedSubject is Map 
             ? exams.selectedSubject['subject_name'].toString().toLowerCase()
             : exams.selectedSubject.toString().toLowerCase();
         String qVal = q.subject?.toLowerCase() ?? "";
         if (!qVal.contains(filterVal) && !filterVal.contains(qVal)) return false;
+      }
+
+      // 4. Institution Filter
+      if (exams.selectedInstitution != null) {
+        if (q.institution != exams.selectedInstitution) return false;
+      }
+
+      // 5. Board Filter
+      if (exams.selectedBoard != null) {
+        if (q.board != exams.selectedBoard) return false;
       }
 
       return true;
@@ -66,7 +79,7 @@ class _QuestionBankScreenState extends State<QuestionBankScreen> {
     }
 
     return Scaffold(
-      backgroundColor: Colors.grey[200], // Desktop-like background
+      backgroundColor: Colors.grey[200],
       appBar: AppBar(
         title: const Text("Teacher's Question Bank"),
         actions: [
@@ -76,6 +89,8 @@ class _QuestionBankScreenState extends State<QuestionBankScreen> {
               exams.setSelectedProgram(null);
               exams.setSelectedClass(null);
               exams.setSelectedSubject(null);
+              exams.setSelectedInstitution(null);
+              exams.setSelectedBoard(null);
             },
           )
         ],
@@ -88,28 +103,34 @@ class _QuestionBankScreenState extends State<QuestionBankScreen> {
             color: Colors.white,
             child: Column(
               children: [
-                _buildDropdown<dynamic>(
-                  label: "Program Type",
-                  value: exams.selectedProgram,
-                  items: exams.bankPrograms,
-                  onChanged: (val) {
-                    exams.setSelectedProgram(val);
-                    exams.setSelectedClass(null);
-                  },
-                  displayName: (item) => item.programType,
-                ),
-                const SizedBox(height: 10),
                 Row(
                   children: [
                     Expanded(
+                      child: _buildDropdown<dynamic>(
+                        label: "Program Type",
+                        value: exams.selectedProgram,
+                        items: exams.bankPrograms,
+                        onChanged: (val) {
+                          exams.setSelectedProgram(val);
+                          exams.setSelectedClass(null);
+                        },
+                        displayName: (item) => item.programType,
+                      ),
+                    ),
+                    const SizedBox(width: 10),
+                    Expanded(
                       child: DropdownButtonFormField<String>(
                         decoration: const InputDecoration(labelText: "Class", border: OutlineInputBorder(), isDense: true, filled: true, fillColor: Color(0xFFFAFAFA)),
-                        value: (exams.selectedClass is String && classList.contains(exams.selectedClass)) ? exams.selectedClass : null,
+                        initialValue: (exams.selectedClass is String && classList.contains(exams.selectedClass)) ? exams.selectedClass : null,
                         items: classList.map((c) => DropdownMenuItem(value: c, child: Text(c))).toList(),
                         onChanged: (val) => exams.setSelectedClass(val),
                       ),
                     ),
-                    const SizedBox(width: 10),
+                  ],
+                ),
+                const SizedBox(height: 10),
+                Row(
+                  children: [
                     Expanded(
                       child: _buildDropdown<dynamic>(
                         label: "Subject",
@@ -119,7 +140,23 @@ class _QuestionBankScreenState extends State<QuestionBankScreen> {
                         displayName: (item) => item is Map ? item['subject_name'] : item.toString(),
                       ),
                     ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: _buildSimpleDropdown(
+                        label: "Institution",
+                        value: exams.selectedInstitution,
+                        items: exams.institutions,
+                        onChanged: (val) => exams.setSelectedInstitution(val),
+                      ),
+                    ),
                   ],
+                ),
+                const SizedBox(height: 10),
+                _buildSimpleDropdown(
+                  label: "Board",
+                  value: exams.selectedBoard,
+                  items: exams.boards,
+                  onChanged: (val) => exams.setSelectedBoard(val),
                 ),
               ],
             ),
@@ -138,11 +175,7 @@ class _QuestionBankScreenState extends State<QuestionBankScreen> {
                         decoration: BoxDecoration(
                           color: Colors.white,
                           boxShadow: [
-                            BoxShadow(
-                              color: Colors.black.withOpacity(0.1),
-                              blurRadius: 10,
-                              offset: const Offset(0, 5),
-                            )
+                            BoxShadow(color: Colors.black.withOpacity(0.1), blurRadius: 10, offset: const Offset(0, 5))
                           ],
                         ),
                         child: Column(
@@ -154,11 +187,15 @@ class _QuestionBankScreenState extends State<QuestionBankScreen> {
                                 children: [
                                   const Text("QUESTION BANK", style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, letterSpacing: 2)),
                                   const SizedBox(height: 10),
-                                  if (exams.selectedProgram != null || exams.selectedSubject != null)
-                                    Text(
-                                      "${exams.selectedProgram?.programType ?? ''} - ${exams.selectedClass ?? ''} - ${exams.selectedSubject is Map ? exams.selectedSubject['subject_name'] : exams.selectedSubject ?? ''}",
-                                      style: const TextStyle(fontSize: 14, color: Colors.grey),
-                                    ),
+                                  Text(
+                                    "${exams.selectedInstitution ?? 'All Institutions'} | ${exams.selectedBoard ?? 'All Boards'}",
+                                    style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: Colors.blueGrey),
+                                  ),
+                                  const SizedBox(height: 4),
+                                  Text(
+                                    "${exams.selectedProgram?.programType ?? 'All Programs'} - ${exams.selectedClass ?? 'All Classes'} - ${exams.selectedSubject is Map ? exams.selectedSubject['subject_name'] : exams.selectedSubject ?? 'All Subjects'}",
+                                    style: const TextStyle(fontSize: 14, color: Colors.grey),
+                                  ),
                                   const SizedBox(height: 20),
                                   Container(height: 1.5, color: Colors.black87),
                                   const SizedBox(height: 30),
@@ -166,7 +203,6 @@ class _QuestionBankScreenState extends State<QuestionBankScreen> {
                               ),
                             ),
                             
-                            // Questions list
                             ...List.generate(filteredQuestions.length, (index) {
                               return _buildPageQuestionItem(filteredQuestions[index], index);
                             }),
@@ -220,7 +256,7 @@ class _QuestionBankScreenState extends State<QuestionBankScreen> {
               padding: const EdgeInsets.only(left: 20, top: 12),
               child: Column(
                 children: q.options!.asMap().entries.map((entry) {
-                  final label = String.fromCharCode(97 + entry.key); // a, b, c, d
+                  final label = String.fromCharCode(97 + entry.key); 
                   return Padding(
                     padding: const EdgeInsets.symmetric(vertical: 3.0),
                     child: Row(
@@ -266,8 +302,23 @@ class _QuestionBankScreenState extends State<QuestionBankScreen> {
     return DropdownButtonFormField<T>(
       isExpanded: true,
       decoration: InputDecoration(labelText: label, border: const OutlineInputBorder(), isDense: true, filled: true, fillColor: Colors.grey[50]),
-      value: safeValue,
+      initialValue: safeValue,
       items: items.map((item) => DropdownMenuItem<T>(value: item, child: Text(displayName(item)))).toList(),
+      onChanged: onChanged,
+    );
+  }
+
+  Widget _buildSimpleDropdown({
+    required String label,
+    required String? value,
+    required List<String> items,
+    required Function(String?) onChanged,
+  }) {
+    return DropdownButtonFormField<String>(
+      isExpanded: true,
+      decoration: InputDecoration(labelText: label, border: const OutlineInputBorder(), isDense: true, filled: true, fillColor: Colors.grey[50]),
+      value: value,
+      items: items.map((s) => DropdownMenuItem(value: s, child: Text(s))).toList(),
       onChanged: onChanged,
     );
   }
@@ -284,6 +335,8 @@ class _QuestionBankScreenState extends State<QuestionBankScreen> {
             exams.setSelectedProgram(null);
             exams.setSelectedClass(null);
             exams.setSelectedSubject(null);
+            exams.setSelectedInstitution(null);
+            exams.setSelectedBoard(null);
           }, child: const Text("Reset filters")),
         ],
       ),

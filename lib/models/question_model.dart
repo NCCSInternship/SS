@@ -9,6 +9,9 @@ class Question {
   final String? subject;
   final String? marks;
   final bool isForBank;
+  final String? exerciseTitle;
+  final String? institution; // New field
+  final String? board;       // New field
 
   Question({
     required this.text,
@@ -21,6 +24,9 @@ class Question {
     this.subject,
     this.marks,
     this.isForBank = false,
+    this.exerciseTitle,
+    this.institution,
+    this.board,
   });
 
   Map<String, dynamic> toMap() {
@@ -35,6 +41,9 @@ class Question {
       'subject': subject,
       'marks': marks,
       'isForBank': isForBank,
+      'exerciseTitle': exerciseTitle,
+      'institution': institution,
+      'board': board,
     };
   }
 
@@ -50,6 +59,9 @@ class Question {
       subject: map['subject'],
       marks: map['marks'],
       isForBank: map['isForBank'] ?? false,
+      exerciseTitle: map['exerciseTitle'],
+      institution: map['institution'],
+      board: map['board'],
     );
   }
 }

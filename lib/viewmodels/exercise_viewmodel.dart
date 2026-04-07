@@ -17,6 +17,12 @@ class ExerciseViewModel extends ChangeNotifier {
     notifyListeners();
   }
 
+  Future<void> _saveToPrefs() async {
+    final prefs = await SharedPreferences.getInstance();
+    final String encoded = json.encode(_exercises.map((e) => e.toMap()).toList());
+    await prefs.setString('saved_exercises', encoded);
+  }
+
   Future<void> addExercise({
     required String title,
     String? program,
@@ -32,19 +38,35 @@ class ExerciseViewModel extends ChangeNotifier {
       questionIds: questionIds,
     );
     _exercises.add(newExercise);
-    
-    final prefs = await SharedPreferences.getInstance();
-    final String encoded = json.encode(_exercises.map((e) => e.toMap()).toList());
-    await prefs.setString('saved_exercises', encoded);
-    
+    await _saveToPrefs();
     notifyListeners();
   }
 
+  Future<void> updateExercise(int index, {
+    required String title,
+    String? program,
+    String? className,
+    String? subject,
+    List<String>? questionIds,
+  }) async {
+    if (index >= 0 && index < _exercises.length) {
+      _exercises[index] = Exercise(
+        title: title,
+        program: program,
+        className: className,
+        subject: subject,
+        questionIds: questionIds,
+      );
+      await _saveToPrefs();
+      notifyListeners();
+    }
+  }
+
   Future<void> deleteExercise(int index) async {
-    _exercises.removeAt(index);
-    final prefs = await SharedPreferences.getInstance();
-    final String encoded = json.encode(_exercises.map((e) => e.toMap()).toList());
-    await prefs.setString('saved_exercises', encoded);
-    notifyListeners();
+    if (index >= 0 && index < _exercises.length) {
+      _exercises.removeAt(index);
+      await _saveToPrefs();
+      notifyListeners();
+    }
   }
 }

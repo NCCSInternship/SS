@@ -127,7 +127,7 @@ class _MCQExamViewState extends State<MCQExamView> {
                       Expanded(
                         child: DropdownButtonFormField<String>(
                           decoration: const InputDecoration(labelText: "Class", border: OutlineInputBorder(), isDense: true, filled: true, fillColor: Color(0xFFFAFAFA)),
-                          value: (exams.selectedClass is String && classList.contains(exams.selectedClass)) ? exams.selectedClass : null,
+                          initialValue: (exams.selectedClass is String && classList.contains(exams.selectedClass)) ? exams.selectedClass : null,
                           items: classList.map((c) => DropdownMenuItem(value: c, child: Text(c))).toList(),
                           onChanged: (val) {
                             exams.setSelectedClass(val);
@@ -293,7 +293,7 @@ class _MCQExamViewState extends State<MCQExamView> {
     return DropdownButtonFormField<T>(
       isExpanded: true,
       decoration: InputDecoration(labelText: label, border: const OutlineInputBorder(), isDense: true, filled: true, fillColor: Colors.grey[50]),
-      value: safeValue,
+      initialValue: safeValue,
       items: items.map((item) => DropdownMenuItem<T>(value: item, child: Text(displayName(item)))).toList(),
       onChanged: onChanged,
     );
