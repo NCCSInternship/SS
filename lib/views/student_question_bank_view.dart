@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../viewmodels/exam_viewmodel.dart';
 import '../models/question_model.dart';
+import '../models/program_model.dart';
 import 'dart:io';
 
 class StudentQuestionBankView extends StatefulWidget {
@@ -32,8 +33,13 @@ class _StudentQuestionBankViewState extends State<StudentQuestionBankView> {
   Widget build(BuildContext context) {
     final exams = context.watch<ExamViewModel>();
 
+    // Check if mandatory filters are selected
+    final bool filtersSelected = exams.selectedProgram != null && 
+                                 exams.selectedClass != null && 
+                                 exams.selectedSubject != null;
+
     // Filtering Logic
-    final filteredQuestions = exams.bankQuestions.where((q) {
+    final filteredQuestions = !filtersSelected ? [] : exams.bankQuestions.where((q) {
       if (!q.isForBank) return false;
 
       // 1. Program Filter
@@ -103,7 +109,7 @@ class _StudentQuestionBankViewState extends State<StudentQuestionBankView> {
                 Row(
                   children: [
                     Expanded(
-                      child: _buildDropdown(
+                      child: _buildDropdown<dynamic>(
                         label: "Program Type",
                         value: exams.selectedProgram,
                         items: exams.bankPrograms,
@@ -111,14 +117,14 @@ class _StudentQuestionBankViewState extends State<StudentQuestionBankView> {
                           exams.setSelectedProgram(val);
                           exams.setSelectedClass(null);
                         },
-                        itemText: (item) => item.programType,
+                        displayName: (item) => item.programType,
                       ),
                     ),
                     const SizedBox(width: 10),
                     Expanded(
                       child: DropdownButtonFormField<String>(
                         decoration: const InputDecoration(labelText: "Class", border: OutlineInputBorder(), isDense: true, filled: true, fillColor: Color(0xFFFAFAFA)),
-                        initialValue: (exams.selectedClass is String && classList.contains(exams.selectedClass)) ? exams.selectedClass : null,
+                        value: (exams.selectedClass is String && classList.contains(exams.selectedClass)) ? exams.selectedClass : null,
                         items: classList.map((c) => DropdownMenuItem(value: c, child: Text(c))).toList(),
                         onChanged: (val) => exams.setSelectedClass(val),
                       ),
@@ -129,12 +135,12 @@ class _StudentQuestionBankViewState extends State<StudentQuestionBankView> {
                 Row(
                   children: [
                     Expanded(
-                      child: _buildDropdown(
+                      child: _buildDropdown<dynamic>(
                         label: "Subject",
                         value: exams.selectedSubject,
                         items: exams.subjects,
                         onChanged: (val) => exams.setSelectedSubject(val),
-                        itemText: (item) => item is Map ? item['subject_name'] : item.toString(),
+                        displayName: (item) => item is Map ? item['subject_name'] : item.toString(),
                       ),
                     ),
                     const SizedBox(width: 10),
@@ -158,88 +164,107 @@ class _StudentQuestionBankViewState extends State<StudentQuestionBankView> {
               ],
             ),
           ),
+          
           Expanded(
-            child: filteredQuestions.isEmpty
-                ? const Center(child: Text("No questions found for this selection."))
-                : SingleChildScrollView(
-              padding: const EdgeInsets.all(16),
-              child: Center(
-                child: Container(
-                  width: 800, 
-                  padding: const EdgeInsets.symmetric(horizontal: 30, vertical: 40),
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    border: Border.all(color: Colors.grey.shade300),
-                    boxShadow: [
-                      BoxShadow(
-                        blurRadius: 10,
-                        color: Colors.black.withOpacity(0.05),
-                      )
-                    ],
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Center(
-                        child: Column(
-                          children: [
-                            const Text(
-                              "QUESTION BANK",
-                              style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
+            child: !filtersSelected
+                ? _buildInitialState()
+                : filteredQuestions.isEmpty
+                    ? const Center(child: Text("No questions found for this selection."))
+                    : SingleChildScrollView(
+                        padding: const EdgeInsets.all(16),
+                        child: Center(
+                          child: Container(
+                            width: 800, 
+                            padding: const EdgeInsets.symmetric(horizontal: 30, vertical: 40),
+                            decoration: BoxDecoration(
+                              color: Colors.white,
+                              border: Border.all(color: Colors.grey.shade300),
+                              boxShadow: [
+                                BoxShadow(
+                                  blurRadius: 10,
+                                  color: Colors.black.withOpacity(0.05),
+                                )
+                              ],
                             ),
-                            const SizedBox(height: 5),
-                            if (exams.selectedInstitution != null || exams.selectedBoard != null)
-                              Text(
-                                "${exams.selectedInstitution ?? ''} ${exams.selectedInstitution != null && exams.selectedBoard != null ? '|' : ''} ${exams.selectedBoard ?? ''}",
-                                style: const TextStyle(fontSize: 14, color: Colors.blueGrey, fontWeight: FontWeight.w600),
-                              ),
-                          ],
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Center(
+                                  child: Column(
+                                    children: [
+                                      const Text(
+                                        "QUESTION BANK",
+                                        style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
+                                      ),
+                                      const SizedBox(height: 5),
+                                      if (exams.selectedInstitution != null || exams.selectedBoard != null)
+                                        Text(
+                                          "${exams.selectedInstitution ?? ''} ${exams.selectedInstitution != null && exams.selectedBoard != null ? '|' : ''} ${exams.selectedBoard ?? ''}",
+                                          style: const TextStyle(fontSize: 14, color: Colors.blueGrey, fontWeight: FontWeight.w600),
+                                        ),
+                                    ],
+                                  ),
+                                ),
+                                const SizedBox(height: 10),
+                                const Divider(),
+                                const SizedBox(height: 20),
+                                ...List.generate(filteredQuestions.length, (index) {
+                                  return _buildPaperQuestion(filteredQuestions[index], index + 1);
+                                }),
+                              ],
+                            ),
+                          ),
                         ),
                       ),
-                      const SizedBox(height: 10),
-                      const Divider(),
-
-                      const SizedBox(height: 20),
-
-                      ...List.generate(filteredQuestions.length, (index) {
-                        return _buildPaperQuestion(filteredQuestions[index], index + 1);
-                      }),
-                    ],
-                  ),
-                ),
-              ),
-            ),
-          ),        ],
+          ),
+        ],
       ),
     );
   }
 
-  Widget _buildDropdown({
+  Widget _buildInitialState() {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(Icons.filter_list, size: 64, color: Colors.grey[400]),
+          const SizedBox(height: 16),
+          const Text("Please select Program, Class, and Subject", 
+            style: TextStyle(color: Colors.grey, fontSize: 16, fontWeight: FontWeight.bold)),
+          const Text("to generate your Question Bank document.", 
+            style: TextStyle(color: Colors.grey, fontSize: 14)),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildDropdown<T>({
     required String label,
     required dynamic value,
-    required List<dynamic> items,
+    required List<T> items,
     required Function(dynamic) onChanged,
-    required String Function(dynamic) itemText,
+    required String Function(dynamic) displayName,
   }) {
-    final bool valueIsValid = value == null || items.any((item) => item == value);
-    final dynamic safeValue = valueIsValid ? value : null;
+    T? safeValue;
+    try {
+      safeValue = items.firstWhere(
+        (item) {
+          if (value == null) return false;
+          if (item == value) return true;
+          if (item is Map && value is Map) return item['id'] == value['id'];
+          if (item is Datum && value is Datum) return item.id == value.id;
+          return false;
+        }
+      );
+    } catch (_) {
+      safeValue = null;
+    }
 
-    return DropdownButtonFormField<dynamic>(
-      decoration: InputDecoration(
-        labelText: label,
-        border: const OutlineInputBorder(),
-        filled: true,
-        fillColor: Colors.grey[50],
-        isDense: true,
-      ),
+    return DropdownButtonFormField<T>(
       isExpanded: true,
-      initialValue: safeValue,
-      items: items.map((item) {
-        return DropdownMenuItem(
-          value: item,
-          child: Text(itemText(item), overflow: TextOverflow.ellipsis),
-        );
-      }).toList(),
+      decoration: InputDecoration(labelText: label, border: const OutlineInputBorder(), isDense: true, filled: true, fillColor: Colors.grey[50]),
+      value: safeValue,
+      items: items.map((item) => DropdownMenuItem<T>(value: item, child: Text(displayName(item)))).toList(),
       onChanged: onChanged,
     );
   }
@@ -259,7 +284,7 @@ class _StudentQuestionBankViewState extends State<StudentQuestionBankView> {
         filled: true, 
         fillColor: Colors.grey[50]
       ),
-      initialValue: value,
+      value: value,
       items: items.map((s) => DropdownMenuItem(value: s, child: Text(s))).toList(),
       onChanged: onChanged,
     );
@@ -287,9 +312,7 @@ class _StudentQuestionBankViewState extends State<StudentQuestionBankView> {
                 Text("($q.marks)", style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.grey)),
             ],
           ),
-
           const SizedBox(height: 8),
-
           if (q.imagePath != null)
             Padding(
               padding: const EdgeInsets.only(bottom: 10),
@@ -298,13 +321,11 @@ class _StudentQuestionBankViewState extends State<StudentQuestionBankView> {
                 height: 150,
               ),
             ),
-
           if (q.type == 'MCQ' && q.options != null)
             Column(
               children: q.options!.asMap().entries.map((entry) {
                 final i = entry.key;
                 final opt = entry.value;
-
                 return Padding(
                   padding: const EdgeInsets.symmetric(vertical: 4),
                   child: Row(
@@ -319,7 +340,6 @@ class _StudentQuestionBankViewState extends State<StudentQuestionBankView> {
                 );
               }).toList(),
             ),
-
           const SizedBox(height: 10),
           const Divider(),
         ],

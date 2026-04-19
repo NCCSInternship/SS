@@ -5,6 +5,7 @@ import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:convert';
 import '../models/question_model.dart';
+import '../models/exercise_model.dart';
 import '../viewmodels/exam_viewmodel.dart';
 import '../viewmodels/exercise_viewmodel.dart';
 import '../data/program_classes.dart';
@@ -103,6 +104,8 @@ class _AddQuestionScreenState extends State<AddQuestionScreen> {
       return;
     }
     
+    // Validation: Only require basic criteria for Question Bank.
+    // If it's for an exercise, those are already pre-filled.
     if (_selectedProgramId == null || _selectedClass == null || _selectedSubject == null) {
       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Please select all academic criteria")));
       return;
@@ -223,7 +226,7 @@ class _AddQuestionScreenState extends State<AddQuestionScreen> {
           children: [
             const Text("Institution", style: TextStyle(fontWeight: FontWeight.bold)),
             _buildStrictDropdown(
-              hint: "Select Institution",
+              hint: "Select Institution (Optional)",
               value: _selectedInstitution,
               items: exams.institutions,
               onChanged: (val) => setState(() => _selectedInstitution = val),
@@ -232,7 +235,7 @@ class _AddQuestionScreenState extends State<AddQuestionScreen> {
 
             const Text("Board", style: TextStyle(fontWeight: FontWeight.bold)),
             _buildStrictDropdown(
-              hint: "Select Board",
+              hint: "Select Board (Optional)",
               value: _selectedBoard,
               items: exams.boards,
               onChanged: (val) => setState(() => _selectedBoard = val),
@@ -345,7 +348,23 @@ class _AddQuestionScreenState extends State<AddQuestionScreen> {
                 hint: "Select exercise",
                 value: _selectedExerciseTitle,
                 items: exerciseVm.exercises.map((ex) => ex.title).toList(),
-                onChanged: (val) => setState(() => _selectedExerciseTitle = val),
+                onChanged: (val) {
+                  setState(() {
+                    _selectedExerciseTitle = val;
+                    // AUTO-POPULATE metadata based on selected exercise
+                    if (val != null) {
+                      try {
+                        final ex = exerciseVm.exercises.firstWhere((e) => e.title == val);
+                        _selectedClass = ex.className;
+                        _selectedSubject = ex.subject;
+                        
+                        // Set Program ID
+                        final p = exams.bankPrograms.firstWhere((p) => p.programType == ex.program);
+                        _selectedProgramId = p.id;
+                      } catch (_) {}
+                    }
+                  });
+                },
               ),
             ],
 

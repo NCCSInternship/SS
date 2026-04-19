@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import '../models/exercise_model.dart';
 import '../viewmodels/exam_viewmodel.dart';
 import '../viewmodels/auth_viewmodel.dart';
+import '../viewmodels/exercise_viewmodel.dart';
 import 'add_question_screen.dart';
 
 class ExerciseQuestionsView extends StatefulWidget {
@@ -15,6 +16,10 @@ class ExerciseQuestionsView extends StatefulWidget {
 }
 
 class _ExerciseQuestionsViewState extends State<ExerciseQuestionsView> {
+  // Store student selections for MCQs: questionIndex -> optionIndex
+  Map<int, int?> _selectedAnswers = {};
+  bool _submitted = false;
+
   @override
   void initState() {
     super.initState();
@@ -29,11 +34,12 @@ class _ExerciseQuestionsViewState extends State<ExerciseQuestionsView> {
   Widget build(BuildContext context) {
     final examVm = context.watch<ExamViewModel>();
     final authVm = context.read<AuthViewModel>();
+    final exerciseVm = context.read<ExerciseViewModel>();
     final bool isTeacher = authVm.role == "teacher";
     
-    // Logic: Only show questions specifically linked to THIS exercise title
+    // Logic: ONLY show questions specifically linked to THIS exercise title
     final filteredQuestions = examVm.bankQuestions.where((q) {
-      return q.exerciseTitle == widget.exercise.title;
+      return q.exerciseTitle != null && q.exerciseTitle == widget.exercise.title;
     }).toList();
 
     return Scaffold(
@@ -41,24 +47,18 @@ class _ExerciseQuestionsViewState extends State<ExerciseQuestionsView> {
       appBar: AppBar(title: Text(widget.exercise.title)),
       body: Column(
         children: [
-          Container(
-            width: double.infinity,
-            padding: const EdgeInsets.all(16),
-            color: Colors.white,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text("Metadata Criteria:", style: TextStyle(fontWeight: FontWeight.bold, color: Colors.blueGrey[700])),
-                const SizedBox(height: 4),
-                Text("${widget.exercise.program ?? 'N/A'} - ${widget.exercise.className ?? 'N/A'} - ${widget.exercise.subject ?? 'N/A'}", 
-                  style: const TextStyle(color: Colors.grey)),
-              ],
-            ),
-          ),
-          const Divider(height: 1),
           Expanded(
             child: filteredQuestions.isEmpty
-                ? const Center(child: Text("No questions linked to this exercise yet."))
+                ? const Center(
+                    child: Padding(
+                      padding: EdgeInsets.all(32.0),
+                      child: Text(
+                        "No questions linked to this exercise yet.",
+                        textAlign: TextAlign.center,
+                        style: TextStyle(color: Colors.grey, fontSize: 16),
+                      ),
+                    ),
+                  )
                 : SingleChildScrollView(
                     padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 16),
                     child: Center(
@@ -93,19 +93,13 @@ class _ExerciseQuestionsViewState extends State<ExerciseQuestionsView> {
                                     Row(
                                       crossAxisAlignment: CrossAxisAlignment.start,
                                       children: [
-                                        // Numbering
                                         Text("${index + 1}. ", 
                                           style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, height: 1.2)),
-                                        
-                                        // Question Text
                                         Expanded(
                                           child: Text(q.text, 
                                             style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w500, height: 1.2)),
                                         ),
-                                        
                                         const SizedBox(width: 8),
-                                        
-                                        // Metadata (Marks and Edit)
                                         Padding(
                                           padding: const EdgeInsets.only(top: 2), 
                                           child: Row(
@@ -142,29 +136,85 @@ class _ExerciseQuestionsViewState extends State<ExerciseQuestionsView> {
                                         padding: const EdgeInsets.only(top: 12, left: 20),
                                         child: Image.file(File(q.imagePath!), height: 180, fit: BoxFit.contain),
                                       ),
+                                    
+                                    // Student Answer Interface
                                     if (q.type == 'MCQ' && q.options != null)
                                       Padding(
                                         padding: const EdgeInsets.only(top: 12, left: 20),
                                         child: Column(
                                           children: q.options!.asMap().entries.map((entry) {
-                                            return Padding(
-                                              padding: const EdgeInsets.symmetric(vertical: 3),
-                                              child: Row(
-                                                children: [
-                                                  Text("${String.fromCharCode(65 + entry.key)}. ", style: const TextStyle(fontWeight: FontWeight.bold)),
-                                                  Expanded(child: Text(entry.value)),
-                                                ],
+                                            final int optIdx = entry.key;
+                                            final String optText = entry.value;
+                                            final bool isSelected = _selectedAnswers[index] == optIdx;
+                                            final bool isCorrect = q.correctAnswer == optText;
+
+                                            return InkWell(
+                                              onTap: _submitted || isTeacher ? null : () {
+                                                setState(() {
+                                                  _selectedAnswers[index] = optIdx;
+                                                });
+                                              },
+                                              child: Container(
+                                                padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 12),
+                                                margin: const EdgeInsets.only(bottom: 4),
+                                                decoration: BoxDecoration(
+                                                  color: _getOptionColor(isSelected, isCorrect),
+                                                  borderRadius: BorderRadius.circular(8),
+                                                  border: Border.all(color: isSelected ? Colors.blue : Colors.grey.shade300),
+                                                ),
+                                                child: Row(
+                                                  children: [
+                                                    Text("${String.fromCharCode(65 + optIdx)}. ", style: const TextStyle(fontWeight: FontWeight.bold)),
+                                                    Expanded(child: Text(optText)),
+                                                    if (_submitted && isSelected)
+                                                      Icon(isCorrect ? Icons.check_circle : Icons.cancel, color: isCorrect ? Colors.green : Colors.red, size: 20),
+                                                  ],
+                                                ),
                                               ),
                                             );
                                           }).toList(),
                                         ),
                                       ),
+                                    
+                                    if (q.type == 'Subjective')
+                                      Padding(
+                                        padding: const EdgeInsets.only(top: 12, left: 20),
+                                        child: TextField(
+                                          enabled: !_submitted && !isTeacher,
+                                          decoration: const InputDecoration(
+                                            hintText: "Type your answer...",
+                                            border: OutlineInputBorder(),
+                                          ),
+                                          maxLines: 3,
+                                        ),
+                                      ),
+
                                     const SizedBox(height: 15),
                                     const Divider(),
                                   ],
                                 ),
                               );
                             }),
+                            
+                            if (!isTeacher && filteredQuestions.isNotEmpty)
+                              Padding(
+                                padding: const EdgeInsets.only(top: 20),
+                                child: SizedBox(
+                                  width: double.infinity,
+                                  height: 50,
+                                  child: ElevatedButton(
+                                    onPressed: _submitted ? () => Navigator.pop(context) : () {
+                                      setState(() => _submitted = true);
+                                      exerciseVm.markCompleted(widget.exercise.title);
+                                      ScaffoldMessenger.of(context).showSnackBar(
+                                        const SnackBar(content: Text("Exercise submitted and marked as completed!")),
+                                      );
+                                    },
+                                    style: ElevatedButton.styleFrom(backgroundColor: _submitted ? Colors.grey : Colors.blue),
+                                    child: Text(_submitted ? "Go Back" : "Submit Exercise"),
+                                  ),
+                                ),
+                              ),
                           ],
                         ),
                       ),
@@ -174,5 +224,11 @@ class _ExerciseQuestionsViewState extends State<ExerciseQuestionsView> {
         ],
       ),
     );
+  }
+
+  Color _getOptionColor(bool isSelected, bool isCorrect) {
+    if (!_submitted) return isSelected ? Colors.blue.withOpacity(0.1) : Colors.transparent;
+    if (isSelected) return isCorrect ? Colors.green.withOpacity(0.1) : Colors.red.withOpacity(0.1);
+    return Colors.transparent;
   }
 }

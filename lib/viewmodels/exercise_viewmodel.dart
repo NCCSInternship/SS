@@ -7,13 +7,26 @@ class ExerciseViewModel extends ChangeNotifier {
   List<Exercise> _exercises = [];
   List<Exercise> get exercises => _exercises;
 
+  // Set of completed exercise titles
+  Set<String> _completedTitles = {};
+  Set<String> get completedTitles => _completedTitles;
+
   Future<void> loadExercises() async {
     final prefs = await SharedPreferences.getInstance();
+    
+    // Load exercises
     final String? exercisesJson = prefs.getString('saved_exercises');
     if (exercisesJson != null) {
       final List<dynamic> decoded = json.decode(exercisesJson);
       _exercises = decoded.map((item) => Exercise.fromMap(item)).toList();
     }
+
+    // Load completion status
+    final List<String>? completed = prefs.getStringList('completed_exercises');
+    if (completed != null) {
+      _completedTitles = completed.toSet();
+    }
+
     notifyListeners();
   }
 
@@ -68,5 +81,12 @@ class ExerciseViewModel extends ChangeNotifier {
       await _saveToPrefs();
       notifyListeners();
     }
+  }
+
+  Future<void> markCompleted(String title) async {
+    _completedTitles.add(title);
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setStringList('completed_exercises', _completedTitles.toList());
+    notifyListeners();
   }
 }

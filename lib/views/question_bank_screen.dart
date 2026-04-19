@@ -33,8 +33,13 @@ class _QuestionBankScreenState extends State<QuestionBankScreen> {
   Widget build(BuildContext context) {
     final exams = context.watch<ExamViewModel>();
 
+    // Check if mandatory filters are selected
+    final bool filtersSelected = exams.selectedProgram != null && 
+                                 exams.selectedClass != null && 
+                                 exams.selectedSubject != null;
+
     // Filtering Logic
-    final filteredQuestions = exams.bankQuestions.where((q) {
+    final filteredQuestions = !filtersSelected ? [] : exams.bankQuestions.where((q) {
       if (!q.isForBank) return false;
 
       // 1. Program Filter
@@ -121,7 +126,7 @@ class _QuestionBankScreenState extends State<QuestionBankScreen> {
                     Expanded(
                       child: DropdownButtonFormField<String>(
                         decoration: const InputDecoration(labelText: "Class", border: OutlineInputBorder(), isDense: true, filled: true, fillColor: Color(0xFFFAFAFA)),
-                        initialValue: (exams.selectedClass is String && classList.contains(exams.selectedClass)) ? exams.selectedClass : null,
+                        value: (exams.selectedClass is String && classList.contains(exams.selectedClass)) ? exams.selectedClass : null,
                         items: classList.map((c) => DropdownMenuItem(value: c, child: Text(c))).toList(),
                         onChanged: (val) => exams.setSelectedClass(val),
                       ),
@@ -164,54 +169,72 @@ class _QuestionBankScreenState extends State<QuestionBankScreen> {
           
           // Page Content
           Expanded(
-            child: filteredQuestions.isEmpty
-                ? _buildEmptyState(exams)
-                : SingleChildScrollView(
-                    padding: const EdgeInsets.symmetric(vertical: 30, horizontal: 16),
-                    child: Center(
-                      child: Container(
-                        constraints: const BoxConstraints(maxWidth: 800),
-                        padding: const EdgeInsets.all(40),
-                        decoration: BoxDecoration(
-                          color: Colors.white,
-                          boxShadow: [
-                            BoxShadow(color: Colors.black.withOpacity(0.1), blurRadius: 10, offset: const Offset(0, 5))
-                          ],
-                        ),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            // Document Header
-                            Center(
-                              child: Column(
-                                children: [
-                                  const Text("QUESTION BANK", style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, letterSpacing: 2)),
-                                  const SizedBox(height: 10),
-                                  Text(
-                                    "${exams.selectedInstitution ?? 'All Institutions'} | ${exams.selectedBoard ?? 'All Boards'}",
-                                    style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: Colors.blueGrey),
-                                  ),
-                                  const SizedBox(height: 4),
-                                  Text(
-                                    "${exams.selectedProgram?.programType ?? 'All Programs'} - ${exams.selectedClass ?? 'All Classes'} - ${exams.selectedSubject is Map ? exams.selectedSubject['subject_name'] : exams.selectedSubject ?? 'All Subjects'}",
-                                    style: const TextStyle(fontSize: 14, color: Colors.grey),
-                                  ),
-                                  const SizedBox(height: 20),
-                                  Container(height: 1.5, color: Colors.black87),
-                                  const SizedBox(height: 30),
-                                ],
-                              ),
+            child: !filtersSelected
+                ? _buildInitialState()
+                : filteredQuestions.isEmpty
+                    ? _buildEmptyState(exams)
+                    : SingleChildScrollView(
+                        padding: const EdgeInsets.symmetric(vertical: 30, horizontal: 16),
+                        child: Center(
+                          child: Container(
+                            constraints: const BoxConstraints(maxWidth: 800),
+                            padding: const EdgeInsets.all(40),
+                            decoration: BoxDecoration(
+                              color: Colors.white,
+                              boxShadow: [
+                                BoxShadow(color: Colors.black.withOpacity(0.1), blurRadius: 10, offset: const Offset(0, 5))
+                              ],
                             ),
-                            
-                            ...List.generate(filteredQuestions.length, (index) {
-                              return _buildPageQuestionItem(filteredQuestions[index], index);
-                            }),
-                          ],
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                // Document Header
+                                Center(
+                                  child: Column(
+                                    children: [
+                                      const Text("QUESTION BANK", style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, letterSpacing: 2)),
+                                      const SizedBox(height: 10),
+                                      Text(
+                                        "${exams.selectedInstitution ?? 'All Institutions'} | ${exams.selectedBoard ?? 'All Boards'}",
+                                        style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: Colors.blueGrey),
+                                      ),
+                                      const SizedBox(height: 4),
+                                      Text(
+                                        "${exams.selectedProgram?.programType ?? 'All Programs'} - ${exams.selectedClass ?? 'All Classes'} - ${exams.selectedSubject is Map ? exams.selectedSubject['subject_name'] : exams.selectedSubject ?? 'All Subjects'}",
+                                        style: const TextStyle(fontSize: 14, color: Colors.grey),
+                                      ),
+                                      const SizedBox(height: 20),
+                                      Container(height: 1.5, color: Colors.black87),
+                                      const SizedBox(height: 30),
+                                    ],
+                                  ),
+                                ),
+                                
+                                ...List.generate(filteredQuestions.length, (index) {
+                                  return _buildPageQuestionItem(filteredQuestions[index], index);
+                                }),
+                              ],
+                            ),
+                          ),
                         ),
                       ),
-                    ),
-                  ),
           ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildInitialState() {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(Icons.filter_list, size: 64, color: Colors.grey[400]),
+          const SizedBox(height: 16),
+          const Text("Please select Program, Class, and Subject", 
+            style: TextStyle(color: Colors.grey, fontSize: 16, fontWeight: FontWeight.bold)),
+          const Text("to generate the Question Bank document.", 
+            style: TextStyle(color: Colors.grey, fontSize: 14)),
         ],
       ),
     );
@@ -302,7 +325,7 @@ class _QuestionBankScreenState extends State<QuestionBankScreen> {
     return DropdownButtonFormField<T>(
       isExpanded: true,
       decoration: InputDecoration(labelText: label, border: const OutlineInputBorder(), isDense: true, filled: true, fillColor: Colors.grey[50]),
-      initialValue: safeValue,
+      value: safeValue,
       items: items.map((item) => DropdownMenuItem<T>(value: item, child: Text(displayName(item)))).toList(),
       onChanged: onChanged,
     );

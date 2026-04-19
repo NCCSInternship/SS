@@ -7,15 +7,6 @@ import 'viewmodels/exam_viewmodel.dart';
 import 'views/login_view.dart';
 import 'views/dashboard.dart';
 
-/// Application Entry Point
-/// Architecture Role:
-/// - Injects global providers (AuthViewModel, ExamViewModel)
-/// - Decides initial screen based on authentication state
-///
-/// Flow:
-/// main() -> MultiProvider -> MyApp -> Consumer
-/// -> LoginView OR Dashboard
-
 void main() {
   runApp(
     MultiProvider(
@@ -38,6 +29,22 @@ class MyApp extends StatelessWidget {
       builder: (context, auth, child) {
         return MaterialApp(
           debugShowCheckedModeBanner: false,
+          theme: ThemeData(
+            // Primary background color matched from the provided graduation image
+            scaffoldBackgroundColor: const Color(0xFFCAD5FF),
+            appBarTheme: const AppBarTheme(
+              backgroundColor: Colors.white,
+              foregroundColor: Colors.black,
+              elevation: 0,
+              iconTheme: IconThemeData(color: Colors.black),
+            ),
+            cardTheme: CardThemeData(
+              elevation: 2,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              color: Colors.white,
+            ),
+            useMaterial3: true,
+          ),
           home: !auth.isLoggedIn
               ? const LoginView()
               : auth.role == "teacher"

@@ -35,8 +35,13 @@ class _MCQExamViewState extends State<MCQExamView> {
   Widget build(BuildContext context) {
     final exams = context.watch<ExamViewModel>();
 
+    // Check if mandatory filters are selected
+    final bool filtersSelected = exams.selectedProgram != null && 
+                                 exams.selectedClass != null && 
+                                 exams.selectedSubject != null;
+
     // Filtering Logic for Exam
-    final mcqs = exams.bankQuestions.where((q) {
+    final mcqs = !filtersSelected ? [] : exams.bankQuestions.where((q) {
       if (q.type != 'MCQ') return false;
 
       if (exams.selectedProgram != null) {
@@ -127,7 +132,7 @@ class _MCQExamViewState extends State<MCQExamView> {
                       Expanded(
                         child: DropdownButtonFormField<String>(
                           decoration: const InputDecoration(labelText: "Class", border: OutlineInputBorder(), isDense: true, filled: true, fillColor: Color(0xFFFAFAFA)),
-                          initialValue: (exams.selectedClass is String && classList.contains(exams.selectedClass)) ? exams.selectedClass : null,
+                          value: (exams.selectedClass is String && classList.contains(exams.selectedClass)) ? exams.selectedClass : null,
                           items: classList.map((c) => DropdownMenuItem(value: c, child: Text(c))).toList(),
                           onChanged: (val) {
                             exams.setSelectedClass(val);
@@ -176,72 +181,74 @@ class _MCQExamViewState extends State<MCQExamView> {
             ),
 
           Expanded(
-            child: mcqs.isEmpty
-                ? const Center(child: Text("No questions match your selection."))
-                : ListView.builder(
-                    itemCount: mcqs.length,
-                    itemBuilder: (_, i) {
-                      final q = mcqs[i];
-                      final options = q.options ?? [];
+            child: !filtersSelected
+                ? _buildInitialState()
+                : mcqs.isEmpty
+                    ? const Center(child: Text("No questions match your selection."))
+                    : ListView.builder(
+                        itemCount: mcqs.length,
+                        itemBuilder: (_, i) {
+                          final q = mcqs[i];
+                          final options = q.options ?? [];
 
-                      return Card(
-                        margin: const EdgeInsets.all(12),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Padding(
-                              padding: const EdgeInsets.all(12),
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Row(
-                                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          return Card(
+                            margin: const EdgeInsets.all(12),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Padding(
+                                  padding: const EdgeInsets.all(12),
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
                                     children: [
-                                      Text("Question ${i + 1}", style: const TextStyle(color: Colors.blue, fontWeight: FontWeight.bold)),
-                                      if (q.marks != null)
-                                        Text("Marks: ${q.marks}", style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.grey)),
+                                      Row(
+                                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                        children: [
+                                          Text("Question ${i + 1}", style: const TextStyle(color: Colors.blue, fontWeight: FontWeight.bold)),
+                                          if (q.marks != null)
+                                            Text("Marks: ${q.marks}", style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.grey)),
+                                        ],
+                                      ),
+                                      const SizedBox(height: 8),
+                                      Text(q.text, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w500)),
                                     ],
                                   ),
-                                  const SizedBox(height: 8),
-                                  Text(q.text, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w500)),
-                                ],
-                              ),
-                            ),
-                            if (q.imagePath != null)
-                              Padding(
-                                padding: const EdgeInsets.symmetric(horizontal: 12),
-                                child: ClipRRect(
-                                  borderRadius: BorderRadius.circular(8),
-                                  child: Image.file(File(q.imagePath!), height: 150, width: double.infinity, fit: BoxFit.cover),
                                 ),
-                              ),
-                            const SizedBox(height: 8),
-                            ...List.generate(options.length, (o) {
-                              return RadioListTile<int>(
-                                value: o,
-                                groupValue: selected[i],
-                                title: Text(options[o]),
-                                onChanged: submitted ? null : (v) => setState(() => selected[i] = v),
-                              );
-                            }),
-                            if (submitted)
-                              Padding(
-                                padding: const EdgeInsets.all(12),
-                                child: Text(
-                                  (selected[i] != null && options[selected[i]!] == q.correctAnswer)
-                                      ? "✔ Correct"
-                                      : "❌ Wrong (Correct: ${q.correctAnswer})",
-                                  style: TextStyle(
-                                    fontWeight: FontWeight.bold,
-                                    color: (selected[i] != null && options[selected[i]!] == q.correctAnswer) ? Colors.green : Colors.red,
+                                if (q.imagePath != null)
+                                  Padding(
+                                    padding: const EdgeInsets.symmetric(horizontal: 12),
+                                    child: ClipRRect(
+                                      borderRadius: BorderRadius.circular(8),
+                                      child: Image.file(File(q.imagePath!), height: 150, width: double.infinity, fit: BoxFit.cover),
+                                    ),
                                   ),
-                                ),
-                              )
-                          ],
-                        ),
-                      );
-                    },
-                  ),
+                                const SizedBox(height: 8),
+                                ...List.generate(options.length, (o) {
+                                  return RadioListTile<int>(
+                                    value: o,
+                                    groupValue: selected[i],
+                                    title: Text(options[o]),
+                                    onChanged: submitted ? null : (v) => setState(() => selected[i] = v),
+                                  );
+                                }),
+                                if (submitted)
+                                  Padding(
+                                    padding: const EdgeInsets.all(12),
+                                    child: Text(
+                                      (selected[i] != null && options[selected[i]!] == q.correctAnswer)
+                                          ? "✔ Correct"
+                                          : "❌ Wrong (Correct: ${q.correctAnswer})",
+                                      style: TextStyle(
+                                        fontWeight: FontWeight.bold,
+                                        color: (selected[i] != null && options[selected[i]!] == q.correctAnswer) ? Colors.green : Colors.red,
+                                      ),
+                                    ),
+                                  )
+                              ],
+                            ),
+                          );
+                        },
+                      ),
           ),
         ],
       ),
@@ -267,6 +274,22 @@ class _MCQExamViewState extends State<MCQExamView> {
     );
   }
 
+  Widget _buildInitialState() {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(Icons.assignment_outlined, size: 64, color: Colors.grey[400]),
+          const SizedBox(height: 16),
+          const Text("Please select Program, Class, and Subject", 
+            style: TextStyle(color: Colors.grey, fontSize: 16, fontWeight: FontWeight.bold)),
+          const Text("to load your MCQ Exam questions.", 
+            style: TextStyle(color: Colors.grey, fontSize: 14)),
+        ],
+      ),
+    );
+  }
+
   Widget _buildDropdown<T>({
     required String label,
     required dynamic value,
@@ -274,7 +297,6 @@ class _MCQExamViewState extends State<MCQExamView> {
     required Function(dynamic) onChanged,
     required String Function(dynamic) displayName,
   }) {
-    // FIX: Explicitly handle the T type to prevent '() => Null' casting issues
     T? safeValue;
     try {
       safeValue = items.firstWhere(
@@ -293,7 +315,7 @@ class _MCQExamViewState extends State<MCQExamView> {
     return DropdownButtonFormField<T>(
       isExpanded: true,
       decoration: InputDecoration(labelText: label, border: const OutlineInputBorder(), isDense: true, filled: true, fillColor: Colors.grey[50]),
-      initialValue: safeValue,
+      value: safeValue,
       items: items.map((item) => DropdownMenuItem<T>(value: item, child: Text(displayName(item)))).toList(),
       onChanged: onChanged,
     );
